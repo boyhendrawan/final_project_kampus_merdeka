@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+
 const initialState = {
   dataUser: null,
   isLoggedIn: !!localStorage.getItem("token"),
@@ -26,8 +27,13 @@ const tokenSlice = createSlice({
     setIsLoggedIn(state, action) {
       state.isLoggedIn = action.payload;
     },
+    updateUserSuccess(state, action) {
+      // Update the user data in the store after successful API call
+      state.dataUser = action.payload;
+    },
   },
 });
 
-export const { login, logout, setUser, setIsLoggedIn } = tokenSlice.actions;
+
+export const { login, logout, setUser, setIsLoggedIn,updateUserSuccess } = tokenSlice.actions;
 export default tokenSlice.reducer;

@@ -2,12 +2,12 @@ import {
   login as fLogin,
   logout as fLogout,
   setIsLoggedIn,
+  updateUserSuccess
 } from "../reducers/auth";
 
 import axios from "axios";
-import { toast } from "react-toastify";
 import { setUser } from "../reducers/auth";
-
+import { toast } from "react-toastify";
 
 export const getProfile =()=>async(dispatch,getState)=>{
   try{
@@ -155,13 +155,64 @@ export const register =
     setRequest(false);
   };
 
-export const logout = (navigate) => {
-  return (dispatch) => {
-    dispatch(fLogout());
-    dispatch(fLogin());
-    dispatch(setIsLoggedIn(false));
-    // console.log("works");/
-    navigate("/auth/login");
+  export const logout = (navigate) => {
+    return (dispatch) => {
+      dispatch(fLogin());
+      dispatch(fLogout());
+      dispatch(setIsLoggedIn(false));
+      navigate("/auth/login");
+    };
   };
-
-};
+  
+  export const updateUser = (data, setUpdate) => async (dispatch, getState) => {
+    try {
+      const { token } = getState().auth;
+      const response = await axios.put(
+        `https://novel-tomatoes-production.up.railway.app/Users/updateUser`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            token: `${token}`,
+          },
+        }
+      );
+      const code = response?.data?.status;
+  
+      if (code === 200) {
+        // Dispatch the updateUserSuccess action with the updated user data
+        dispatch(updateUserSuccess(response?.data?.user));
+  
+        // Display success message
+        toast.success(response?.data?.msg, {
+          position: toast.POSITION.BOTTOM_RIGHT,
+          className: "absolute bottom-0 right-1/2",
+        });
+      } else {
+        toast.error("wait a minute for update.", {
+          position: toast.POSITION.BOTTOM_RIGHT,
+          className: "absolute bottom-0 right-1/2",
+        });
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        // Display error message from the API response
+        toast.error(error?.response?.data, {
+          position: toast.POSITION.BOTTOM_RIGHT,
+          className: "absolute bottom-0 right-1/2",
+        });
+      } else {
+        // Display generic error message
+        toast.error("An error occurred. Please try again later.", {
+          position: toast.POSITION.BOTTOM_RIGHT,
+          className: "absolute bottom-0 right-1/2",
+        });
+      }
+    }
+    // If the `setUpdate` function is available, set the state to false
+    if (setUpdate) {
+      setUpdate(false);
+    }
+  };
+  

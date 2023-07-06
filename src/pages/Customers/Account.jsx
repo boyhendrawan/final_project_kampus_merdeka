@@ -1,20 +1,42 @@
-import { IoMdArrowBack } from "react-icons/io";
 import { Link, useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { logout, updateUser } from "../../utilites/redux/action/login";
+import { useDispatch, useSelector } from "react-redux";
+
 import { FiSettings } from "react-icons/fi";
 import { ImExit } from "react-icons/im";
-import { TbPencilMinus } from "react-icons/tb"; 
-import { logout } from "../../utilites/redux/action/login";
-import { useDispatch } from "react-redux";
+import { IoMdArrowBack } from "react-icons/io";
+import LoadingRequest from "../../components/LoadingRequest";
+import { TbPencilMinus } from "react-icons/tb";
+import useInput from "../../utilites/customHooks/use-input";
 
 const Account = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState("");
-
+  const [requestUpdate, setUpdate] = useState(false);
+  const [data, setData] = useState(null);
+  const [updateMessage, setUpdateMessage] = useState("");
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // get data from global var
+  const { dataUser } = useSelector((state) => state.auth);
+
+  const {
+    value: valueFullName,
+    isInvalid: invalidFullName,
+    handlerBlur: handleBlurFullName,
+    handlerChange: handleChangeFullName
+  } = useInput((e) => e.length > 3);
+
+  const {
+    value: valuePhone,
+    isInvalid: invalidPhone,
+    handlerBlur: handleBlurPhone,
+    handlerChange: handleChangePhone,
+  } = useInput((e) => e.length > 10);
+
+
   const openModal = () => {
     setIsModalOpen(true);
   };
@@ -23,25 +45,37 @@ const Account = () => {
     setIsModalOpen(false);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "fullName") {
-      setFullName(value);
-    } else if (name === "phoneNumber") {
-      setPhoneNumber(value);
-    } else if (name === "email") {
-      setEmail(value);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (invalidFullName || invalidPhone) {
+      return;
+    }
+  
+    const userData = {
+      uuid_user: dataUser?.uuid_user,
+      email: dataUser?.email,
+      gender: "L",
+      full_name: valueFullName,
+      phone: valuePhone,
+    };
+    setData(userData);
+    setUpdate(true);
+    setUpdateMessage("Sedang memperbarui data...");
+    try {
+      await dispatch(updateUser(userData));
+      closeModal();
+    } catch (error) {
+      setUpdate(false);
+    } finally {
+      setUpdateMessage("");
     }
   };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Lakukan logika penyimpanan data atau pengiriman ke server
-    // Berdasarkan nilai fullName, phoneNumber, dan email
-    console.log("Data Profil:", fullName, phoneNumber, email);
-    closeModal();
-  };
-
+  
+  useEffect(() => {
+    if (requestUpdate && data) {
+      dispatch(updateUser(data));
+    }
+  }, [requestUpdate, data, dispatch]);
   return (
     <div className="container mx-auto px-4">
       {/* Komponen Account */}
@@ -71,47 +105,16 @@ const Account = () => {
         </div>
         <div className="border-b border-slate-500 w-11/12 flex items-center py-4">
           <ImExit className="text-primary-darkblue04 mr-2" size="30px" />
-          <button className="flex items-center gap-2" onClick={(e) => dispatch(logout(navigate))}>
+          <button
+            className="flex items-center gap-2"
+            onClick={(e) => dispatch(logout(navigate))}
+          >
             Keluar
           </button>
         </div>
         <span className="text-slate-500 font-thin text-xs">version 1.1.0</span>
       </div>
       {/* Akhir Komponen Account */}
-
-      {/* Navbar */}
-      {/* <div className="fixed bottom-0 left-0 w-full shadow-md py-2 px-4 md:bottom-auto md:top-0 md:mt-2">
-        <div className="md:flex md:justify-between md:ml-24 lg:32 xl:ml-44 overflow-x-hidden">
-          <div className="hidden md:flex">
-            <img src={logo} alt="Logo" className="h-[50px]" />
-          </div>
-          <div className="flex items-center justify-between md:mr-24 lg:32 xl:mr-44">
-            <div className="mr-4 flex flex-col items-center text-slate-500 md:hidden">
-              <Link to={"/"}>
-                <BiHomeAlt size="25px" />
-                <span className="text-xs mt-1">Beranda</span>
-              </Link>
-            </div>
-            <div className="mr-4 flex flex-col items-center text-slate-500">
-              <MdEventNote size="25px" />
-              <span className="text-xs mt-1 md:hidden">Riwayat</span>
-            </div>
-            <div className="mr-4 flex flex-col items-center text-slate-500">
-              <Link to={"/user/notification"}>
-                <IoMdNotificationsOutline size="25px" />
-                <span className="text-xs mt-1 md:hidden">Notifikasi</span>
-              </Link>
-            </div>
-            <div className="mr-4 flex flex-col items-center text-primary-darkblue04">
-              <Link to={"/user/account"}>
-                <MdOutlineAccountCircle className="flex items-center" size="25px" />
-                <span className="font-bold text-xs mt-1 md:hidden">Akun</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div> */}
-      {/* Akhir Navbar */}
 
       {/* Modal */}
       {isModalOpen && (
@@ -122,7 +125,10 @@ const Account = () => {
               <h3 className="text-neutral-neutral01 bg-primary-darkblue03 p-2 text-sm rounded-t-lg">
                 Data Diri
               </h3>
-              <form className="bg-white flex flex-col gap-1 w-10/12 mx-auto" onSubmit={handleSubmit}>
+              <form
+                className="bg-white flex flex-col gap-1 w-10/12 mx-auto"
+                onSubmit={handleSubmit}
+              >
                 <label htmlFor="fullName" className="text-xs text-primary-darkblue04 mt-3">
                   Nama Lengkap
                 </label>
@@ -130,10 +136,17 @@ const Account = () => {
                   type="text"
                   id="fullName"
                   name="fullName"
+                  placeholder={dataUser?.full_name ?? "Nama Lengkap"}
                   className="rounded-sm shadow-md"
-                  value={fullName}
-                  onChange={handleInputChange}
+                  onChange={handleChangeFullName}
+                  onBlur={handleBlurFullName}
+                  value={valueFullName}
                 />
+                {invalidFullName && (
+                  <p className="message-error-input">
+                    Nama harus lebih dari 3 karakter
+                  </p>
+                )}
                 <label htmlFor="phoneNumber" className="text-xs text-primary-darkblue04">
                   Nomor Telepon
                 </label>
@@ -141,33 +154,37 @@ const Account = () => {
                   type="text"
                   id="phoneNumber"
                   name="phoneNumber"
+                  placeholder={dataUser?.phone ?? "Nomor Telepon"}
                   className="rounded-sm shadow-md"
-                  value={phoneNumber}
-                  onChange={handleInputChange}
+                  onChange={handleChangePhone}
+                  onBlur={handleBlurPhone}
+                  value={valuePhone}
                 />
-                <label htmlFor="email" className="text-xs text-primary-darkblue04">
-                  Email
-                </label>
-                <input
-                  type="text"
-                  id="email"
-                  name="email"
-                  className="rounded-sm shadow-md"
-                  value={email}
-                  onChange={handleInputChange}
-                />
-                <button
-                  type="submit"
-                  className="bg-primary-darkblue02 text-white rounded-sm px-2 py-1 mt-2"
-                >
-                  Simpan
-                </button>
-                <button
-                  className="bg-primary-darkblue04 text-white rounded-sm px-2 py-1 mt-2"
-                  onClick={closeModal}
-                >
-                  Batal
-                </button>
+                {invalidPhone && (
+                  <p className="message-error-input">
+                    Nomor telepon harus memiliki lebih dari 10 digit
+                  </p>
+                )}
+                <p className="text-green-500 font-bold text-xs">{updateMessage}</p>
+                <p className="text-slate-300 font-bold text-xs">*Silahkan Input Ulang Data , dan pastikan sesuai</p>
+                {requestUpdate ? (
+                  <LoadingRequest />
+                ) : (
+                  <>
+                    <button
+                      type="submit"
+                      className="bg-primary-darkblue02 text-white rounded-sm px-2 py-1 mt-2"
+                    >
+                      Simpan
+                    </button>
+                    <button
+                      className="bg-primary-darkblue04 text-white rounded-sm px-2 py-1 mt-2"
+                      onClick={closeModal}
+                    >
+                      Batal
+                    </button>
+                  </>
+                )}
               </form>
             </div>
           </div>
